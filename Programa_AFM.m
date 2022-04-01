@@ -10,7 +10,8 @@ function varargout = Programa_AFM(varargin)
 %      function named CALLBACK in PROGRAMA_AFM.M with the given input arguments.
 %
 %      PROGRAMA_AFM('Property','Value',...) creates a new PROGRAMA_AFM or raises the
-%      existing singleton*.  Starting from the left, property value pairs are
+%      existing singleton*.  Starting from the left, property value pairs
+%      are  
 %      applied to the GUI before Programa_AFM_OpeningFcn gets called.  An
 %      unrecognized property name or invalid value makes property application
 %      stop.  All inputs are passed to Programa_AFM_OpeningFcn via varargin.
@@ -22,7 +23,7 @@ function varargout = Programa_AFM(varargin)
 
 % Edit the above text to modify the response to help Programa_AFM
 
-% Last Modified by GUIDE v2.5 22-Mar-2022 22:21:28
+% Last Modified by GUIDE v2.5 27-Mar-2022 11:08:21
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -95,9 +96,9 @@ end
 handles.file = file;
 guidata(hObject,handles)
 
-% --- Executes on button press in StartButton.
-function StartButton_Callback(hObject, eventdata, handles)
-% hObject    handle to StartButton (see GCBO)
+% --- Executes on button press in StartButton1.
+function StartButton1_Callback(hObject, eventdata, handles)
+% hObject    handle to StartButton1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -115,7 +116,6 @@ ConstK = get(handles.ConstK,'Value');
 graph_direction = get(handles.GraphDirection,'String');  %Recebe a string do sentido do gráfico
 
 txtIndex = 1;
-i = 1;
 
 txtSize = length(file); %Variável responsável por receber o número de arquivos selecionados
 
@@ -161,7 +161,13 @@ while txtIndex <= txtSize
     
  %Aplicando o offset no gráfico eixo Y
  
- FlippedArrayY = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele está começando do fim para o início
+ if NumYaxis(1) > NumYaxis(length(NumYaxis))
+ 
+    FlippedArrayY = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele está começando do fim para o início
+ 
+ else
+    FlippedArrayY = NumYaxis;
+ end
  
  averageY = sum(FlippedArrayY(1:1))/1;  %Faço a média com os 150 primeiro valores
  
@@ -195,7 +201,7 @@ while txtIndex <= txtSize
  AF_Mean = (sum(AF_Matrix)/length(AF_Matrix)); %Média dos valores da matriz
  set(handles.AdhesionForce,'string',num2str(AF_Mean));
  
- %Obtendo a Constante Elástica da Amostra (K)
+ %Obtendo a Constante Elástica do conjunto alavanca amostra (K)
  
  flipY = flip(NumYaxis); %Invertendo o array das coordenadas Y,X para que o indice 1 seja a coordenada da origem
  flipX = flip(NumXaxis);
@@ -566,10 +572,10 @@ for i = 1:1:numb_sel_graph
     hold on
     grid on
     figure(1)
-    directory = fullfile(path, file(i));
-    xls_archive = xlsread(string(directory));
+    directory = fullfile(path, file(i));        %Pega o diretório do arquivo
+    xls_archive = xlsread(string(directory));   %Lê o arquivo excel e salva em xls_archive
     
-    plot(flip(xls_archive(1:length(xls_archive),1)),flip(xls_archive(1:length(xls_archive),2)))
+    plot(flip(xls_archive(1:length(xls_archive),1)),flip(xls_archive(1:length(xls_archive),2))) %Plota os gráficos
     
 end
 
@@ -582,6 +588,18 @@ function ImportData2_Callback(hObject, eventdata, handles)
 % hObject    handle to ImportData2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+[file,path] = uigetfile('*.xls', 'MultiSelect', 'on');
+if isequal(file,0)
+   disp('User selected Cancel');
+else
+   disp(['User selected ', fullfile(path,file)]);
+end
+
+%Enviando o valor da variável pelo guidata
+
+handles.file = file;
+handles.path = path;
+guidata(hObject,handles)
 
 
 % --- Executes on button press in StartButton2.
@@ -589,3 +607,71 @@ function StartButton2_Callback(hObject, eventdata, handles)
 % hObject    handle to StartButton2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+data = handles.file; %Recebe o valor da variável do guidata
+path = handles.path;
+
+xlsIndex = 1;
+aux = 1;
+
+archivesNumber = length(data); %Variável responsável por receber o número de arquivos selecionados
+
+while aux <= archivesNumber
+    i = 1;
+    while xlsIndex <= archivesNumber
+             
+        directory = fullfile(path, data(i));
+        xls_archive = xlsread(string(directory));
+        
+        NumXaxis(i,xlsIndex) = xls_archive(xlsIndex,1); %Seleciono o índice do vetor onde está a string que necessito e salvo em outro vetor
+        NumYaxis(i,xlsIndex) = xls_archive(xlsIndex,2);
+        
+        i = i + 1;
+          
+        xlsIndex = xlsIndex + 1;      
+    end
+    aux = aux + 1;
+end
+
+    firstMatrix = NumXaxis(1:length(NumXaxis),1); %Preenchendo as matrizes 1 e 2 com os valores do 1° e 2° arquivo respectivamente;
+    firstMatrix = NumYaxis(1:length(NumYaxis),1);
+    secondMatrix = NumXaxis(1:length(NumXaxis),2);
+    secondMatrix = NumYaxis(1:length(NumYaxis),2);
+    
+    minPointFirstMatrix = min(firstMatrix);
+    minPointSecondMatrix = min(secondMatrix);
+    
+    if minPointFirstMatrix < minPointSecondMatrix     %Esse if tem a função de decobrir qual matrix contém o gráfico de ida e volta
+        matrixBack = firstMatrix;                     %Isso é importante para realizar corretamente a integral e achar a área correta
+        matrixOut = secondMatrix;
+    else
+        matrixBack = secondMatrix;
+        matrixOut = firstMatrix;
+    end
+    
+    energyDissipation = trapz(matrixBack,matrixOut) %Calculando a área entre as curvas
+    
+    set(handles.EnergyDissipation,'string', energyDissipation); %Enviando para o usuário a energia dissipada
+
+
+
+function EnergyDissipation_Callback(hObject, eventdata, handles)
+% hObject    handle to EnergyDissipation (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of EnergyDissipation as text
+%        str2double(get(hObject,'String')) returns contents of EnergyDissipation as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function EnergyDissipation_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to EnergyDissipation (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
