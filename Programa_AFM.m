@@ -1,3 +1,4 @@
+
 function varargout = Programa_AFM(varargin)
 % PROGRAMA_AFM MATLAB code for Programa_AFM.fig
 %      PROGRAMA_AFM, by itself, creates a new PROGRAMA_AFM or raises the existing
@@ -179,20 +180,17 @@ ida_e_volta = get(handles.ida_e_volta,'Value');
     if ida_e_volta == false
         
         %Aplicando o offset no gráfico eixo Y        
-        offset = Offset(NumYaxis, handles); %Função que aplica o offset
-        NumYaxis = NumYaxis + offset;
-        
+        NumYaxis = Offset(NumYaxis,NumXaxis, handles); %Função que aplica o offset
+               
     else  
         %Teste para saber se é o gráfico de ida
         %Em seguida é somado o quanto de offset é necessário.
-        if NumYaxis(1,1) < NumYaxis(length(NumYaxis)/4,1)
-           NumAux = NumYaxis(1:length(NumYaxis),1);
-           offset = Offset(NumAux, handles);
-           NumYaxis = NumYaxis + offset;
-        elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis)/4,2)
-            NumAux = NumYaxis(1:length(NumYaxis),2);
-            offset = Offset(NumAux, handles);
-            NumYaxis = NumYaxis + offset;
+        if NumYaxis(1,1) < NumYaxis(length(NumYaxis)/2,1)
+          % NumAux = NumYaxis(1:length(NumYaxis),1);
+           NumYaxis = Offset(NumYaxis,NumXaxis, handles);   
+        elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis)/2,2)
+           % NumAux = NumYaxis(1:length(NumYaxis),2);
+            NumYaxis = Offset(NumYaxis,NumXaxis, handles);         
         end       
     end
     
@@ -240,6 +238,8 @@ ida_e_volta = get(handles.ida_e_volta,'Value');
     
     for i=1:1:length(MinYaxis)
         
+        %REFAZER ESSA PARTE DO K USANDO O POLYFIT E IMPLEMENTAR DEPOIS
+        %DESSE FOR
         minimumIndex(i) = find(flipY(1:length(flipY),i) == MinYaxis(i),1,'last');  %Obtendo a posição do ponto de mínimo no array NumYaxis
         lastIndex(i) = minimumIndex(length(minimumIndex)); %Indice do último número do ponto mínimo
         IndexStart(i) = lastIndex(i) + 20; %Pequena distância do ponto de mínimo para evitar oscilações no início da reta
@@ -252,7 +252,6 @@ ida_e_volta = get(handles.ida_e_volta,'Value');
         
         kSample(i) = abs((Yend(i) - Ystart(i))/(Xend(i) - Xstart(i))); %Calculando a inclinação da reta
         
-        %set(handles.ElastConstSample,'string',kSample); %Enviando para o usuário a inclinação da reta
         
         %Salvando os valores de K dos ensaios das amostras em uma matriz
         
@@ -680,40 +679,54 @@ if (txtIndex == txtSize)
     xlswrite(strcat(save_directory,'\',save_name + " (Ks and Forces)"), K_Force_matrix);
 end
 
-function  OffsetNum = Offset(NumYaxis, handles)
+function  OffsetNum = Offset(NumYaxis,NumXaxis, handles)
 
-percentageInit = get(handles.Percentage_Start,'Value'); 
+percentageInit = get(handles.Percentage_Start,'Value');
 percentageEnd = get(handles.Percentage_End,'Value');
 
 if NumYaxis(1) > NumYaxis(length(NumYaxis))
     
     FlippedArrayY = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele está começando do fim para o início
-    
+    FlippedArrayX = flip(NumXaxis);
 else
     FlippedArrayY = NumYaxis;
+    FlippedArrayX = NumXaxis;
 end
 
 valueInit = round((percentageInit/100) * length(FlippedArrayY)); %Posição correspondente a porcentagem inicial
 valueEnd = round((percentageEnd/100) * length(FlippedArrayY)); %Posição correspondente a porcentagem final
 
-for i=1:length(FlippedArrayY)  
+for i=1:length(FlippedArrayY)
     if isnan(FlippedArrayY(i,1))
-        FlippedArrayY(i:length(FlippedArrayY),1) = 0;
+        FlippedArrayX(i:length(FlippedArrayY),1) = 0;
         FlippedArrayY(i:length(FlippedArrayY),1) = 0;
         break
     end
 end
 
-aux = FlippedArrayY(valueInit:valueEnd);
-yRangeMean = sum(aux)/length(aux);
+%aux = FlippedArrayY(valueInit:valueEnd);
+%yRangeMean = sum(aux)/length(aux);
 
-if yRangeMean < 0        %Se a média for negativa eu somo a média no vetor
+aux_2 = size(FlippedArrayY);
+aux_2 = aux_2(2);
+
+for i=1:aux_2
+    x = FlippedArrayX(1:length(FlippedArrayX),i);
+    y = FlippedArrayY(1:length(FlippedArrayY),i);
+    p1 = polyfit(x,y,1);
+    yFitOffSet = p1(2);
     
-    OffsetNum = -1 * yRangeMean;     %Aplicando o offset com o valor da média
-    
-else %Caso contrário eu subtraio a média no vetor
-    OffsetNum = -1 * yRangeMean;
+    if yFitOffSet < 0        %Se a média for negativa eu somo a média no vetor
+        
+        auxOffsetNum = -1 * yFitOffSet;     %Aplicando o offset com o valor da média
+        OffsetNum(1:length(NumYaxis),i) = NumYaxis(1:length(NumYaxis),i) + auxOffsetNum;
+        
+    else %Caso contrário eu subtraio a média no vetor
+        auxOffsetNum = -1 * yFitOffSet;
+        OffsetNum(1:length(NumYaxis),i) = NumYaxis(1:length(NumYaxis),i) + auxOffsetNum;
+    end
 end
+
 
 %A função abaixo separa somente o regime repulsivo da identação
 function [newXAxis, newYAxis] = repulsiveReg(xAxis, yAxis, handles)
