@@ -23,7 +23,7 @@ function varargout = Programa_AFM(varargin)
 
 % Edit the above text to modify the response to help Programa_AFM
 
-% Last Modified by GUIDE v2.5 31-Mar-2022 22:18:09
+% Last Modified by GUIDE v2.5 02-May-2022 23:27:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,10 +58,10 @@ handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
-%Defini√ß√£o das condi√ß√µes iniciais do programa
-set(handles.ConstS2,'Enable','off');
+%DefiniÁ„o das condiÁıes iniciais do programa
 set(handles.VoltRadioButtonY,'Value', 1);
 set(handles.idaOuVolta,'Value', 1);
+set(handles.Sample_on_Substrate,'Value', 1);
 
 
 % UIWAIT makes Programa_AFM wait for user response (see UIRESUME)
@@ -92,7 +92,7 @@ else
     disp(['User selected ', fullfile(path,file)]);
 end
 
-%Enviando o valor da vari√°vel pelo guidata
+%Enviando o valor da vari·vel pelo guidata
 
 handles.file = file;
 guidata(hObject,handles)
@@ -103,46 +103,53 @@ function StartButton1_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file = handles.file; %Recebe o valor da vari√°vel do guidata
+%Tratamento de erros do usu·rio
+if checkInput(handles)
+    errordlg("Todos os campos devem ser preenchidos!");
+    return
+end
 
-if get(handles.AmpereRadioButtonY,'Value') ~= 1    %Verifica se o usu√°rio escolheu Volt
+file = handles.file; %Recebe o valor da vari·vel do guidata
+
+if get(handles.AmpereRadioButtonY,'Value') ~= 1    %Verifica se o usu·rio escolheu Volt
     ConstS = get(handles.ConstS,'Value');
     
-elseif get(handles.AmpereRadioButtonY, 'Value') == 1  %Verifica se o usu√°rio escolheu Ampere
+elseif get(handles.AmpereRadioButtonY, 'Value') == 1  %Verifica se o usu·rio escolheu Ampere
     ConstS = get(handles.ConstS2,'Value');
 end
 
 ConstK = get(handles.ConstK,'Value');
-graph_direction = get(handles.GraphDirection,'String');  %Recebe a string do sentido do gr√°fico
+graph_direction = get(handles.GraphDirection,'String');  %Recebe a string do sentido do gr·fico
 
 txtIndex = 1;
 
-txtSize = length(file); %Vari√°vel respons√°vel por receber o n√∫mero de arquivos selecionados
+txtSize = length(file); %Vari·vel respons·vel por receber o n˙mero de arquivos selecionados
 
-%Colocando t√≠tulo nas duas colunas da matriz
+%Colocando tÌtulo nas duas colunas da matriz
 K_Force_matrix(1,1) = "K Amostra";
-K_Force_matrix(1,2) = "For√ßa de Ades√£o";
-line_K_F_matrix = 2; %Vari√°vel respons√°vel por mudar a minha da matriz que salva os Ks e For√ßas
+K_Force_matrix(1,2) = "ForÁa de Ades„o";
+line_K_F_matrix = 2; %Vari·vel respons·vel por mudar a minha da matriz que salva os Ks e ForÁas
 
 %Pegando os dados do .txt e alimentando o vetor
 j = 1;
+
 while txtIndex <= txtSize
     
     auxChangeLine = true;
     i = 1;
     
-    mFile = fopen(string(file(txtIndex)),'r'); %Aten√ß√£o o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e √± file(x)
+    mFile = fopen(string(file(txtIndex)),'r'); %AtenÁ„o o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e Ò file(x)
     TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
     
-    while auxChangeLine  %While respons√°vel em pegar cada elemento do .txt e salvar em um vetor
+    while auxChangeLine  %While respons·vel em pegar cada elemento do .txt e salvar em um vetor
         
         TakeLineThenStep = fgetl(mFile);
-       
-        if TakeLineThenStep ~= -1  %Essa condi√ß√£o verifica se chegou ao final do arquivo .txt
-            %Vari√°vel i s√£o as linhas da matriz, j s√£o as colunas
+   
+        if TakeLineThenStep ~= -1  %Essa condiÁ„o verifica se chegou ao final do arquivo .txt
+            %Vari·vel i s„o as linhas da matriz, j s„o as colunas
             %Coluna 1 referente ao .txt 1 coluna 2 referente ao .txt 2...
             stringNum = regexp(TakeLineThenStep, '\t', 'split'); %Muda de linha no arquivo .txt e separa as strings do vetor
-            NumXaxis(i,j) = str2double(stringNum(1)); %Seleciono o √≠ndice do vetor onde est√° a string que necessito e salvo em outro vetor
+            NumXaxis(i,j) = str2double(stringNum(1)); %Seleciono o Ìndice do vetor onde est· a string que necessito e salvo em outro vetor
             NumYaxis(i,j) = str2double(stringNum(2));
         else
             auxChangeLine = false;
@@ -154,46 +161,44 @@ while txtIndex <= txtSize
     j = j + 1;
 end
 
-%La√ßo necess√°rio para remover os zeros adicionados nas colunas quando uma
-%delas √© maior que a outra, o que causa problemas por inserir valores
+%LaÁo necess·rio para remover os zeros adicionados nas colunas quando uma
+%delas È maior que a outra, o que causa problemas por inserir valores
 %inexistentes no arquivo inicial.
-for i=1:length(NumXaxis)
-    aux = i + 3;
-    if NumXaxis(i:aux,1) == 0
+
+for i=1:length(NumXaxis)  
+    if NumXaxis(i,1) == 0
         NumXaxis(i:length(NumXaxis),1) = nan;
         NumYaxis(i:length(NumYaxis),1) = nan;
         break
-    elseif NumXaxis(i:aux,2) == 0
+    elseif NumXaxis(i,2) == 0
         NumXaxis(i:length(NumXaxis),2) = nan;
         NumYaxis(i:length(NumYaxis),2) = nan;
         break
     end
 end
 
-txtIndex = 1; %Volto o valor da vari√°vel para usar no segundo loop
+txtIndex = 1; %Volto o valor da vari·vel para usar no segundo loop
     
 ida_e_volta = get(handles.ida_e_volta,'Value');
     
     if ida_e_volta == false
         
-        %Aplicando o offset no gr√°fico eixo Y        
-        NumYaxis = Offset(NumYaxis); %Fun√ß√£o que aplica o offset
-        
+        %Aplicando o offset no gr·fico eixo Y        
+        NumYaxis = Offset(NumYaxis,NumXaxis, handles); %FunÁ„o que aplica o offset
+               
     else  
-        %Teste para saber se √© o gr√°fico de ida
-        %Em seguida √© somado o quanto de offset √© necess√°rio.
-        if NumYaxis(1,1) < NumYaxis(length(NumYaxis)/4,1)
-           NumAux = NumYaxis(1:length(NumYaxis));
-           offset = Offset(NumAux);
-           NumYaxis = NumYaxis + offset;
-        elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis)/4,2)
-            NumAux = NumYaxis(1:length(NumYaxis));
-            offset = Offset(NumAux);
-            NumYaxis = NumYaxis + offset;
+        %Teste para saber se È o gr·fico de ida
+        %Em seguida È somado o quanto de offset È necess·rio.
+        if NumYaxis(1,1) < NumYaxis(length(NumYaxis)/2,1)
+          % NumAux = NumYaxis(1:length(NumYaxis),1);
+           NumYaxis = Offset(NumYaxis,NumXaxis, handles);   
+        elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis)/2,2)
+           % NumAux = NumYaxis(1:length(NumYaxis),2);
+            NumYaxis = Offset(NumYaxis,NumXaxis, handles);         
         end       
     end
     
-    %Convertendo os submultiplos de Volt
+    %Convertendo os submultiplos de Volt/Ampere
     if(get(handles.nVRadioButtonY,'Value'))
         NumXaxis = NumXaxis * 10^9;
         NumYaxis = NumYaxis * 10^9;
@@ -211,96 +216,120 @@ ida_e_volta = get(handles.ida_e_volta,'Value');
     %Convertendo de Volt para nm
     NumXaxis = NumXaxis * S;
     
-    %Convertendo o eixo X de deslocamento do piezo para deslocamento
-    %vertical da amostra.
-    NumXaxis = NumXaxis - NumYaxis;
+    %A condiÁ„o abaixo verifica se o radioButton para amostra suspensa est·
+    %marcado e caso verdade o eixo X È convertido para deslocamento
+    %vertical da amostra, dessa forma È descontada a deflex„o da alavanca
+    %no momento que ela aplica forÁa.
+    if get(handles.Suspended_Sample,'Value') 
     
-    %Convertendo o eixo Y para for√ßa
+        %Convertendo o eixo X de deslocamento do piezo para deslocamento
+        %vertical da amostra.
+        NumXaxis = NumXaxis - NumYaxis;
+    end
+    
+    %Convertendo o eixo Y para forÁa
     NumYaxis = NumYaxis * K;
     
-    %Obtendo a for√ßa de ades√£o
-    MinYaxis = min(NumYaxis);  %Encontra o ponto de m√≠nimo no Array
-    % set(handles.AdhesionForce,'string',num2str(MinYaxis)); %Envia para a tela o valor de m√≠nimo
+    %Obtendo a forÁa de ades„o
+    MinYaxis = min(NumYaxis);  %Encontra o ponto de mÌnimo no Array
+    % set(handles.AdhesionForce,'string',num2str(MinYaxis)); %Envia para a tela o valor de mÌnimo
     
-    %Salvando a for√ßa de ades√£o dos ensaios da amostra em uma matriz
+    %Salvando a forÁa de ades„o dos ensaios da amostra em uma matriz
     
     AF_Matrix = MinYaxis;  %Salvando em uma matriz os valores de K
     
-    %Encontrando a m√©dia da For√ßa de Ades√£o e a enviando  para o usu√°rio
+    %Encontrando a mÈdia da ForÁa de Ades„o e a enviando  para o usu·rio
     
-    AF_Mean = (sum(AF_Matrix)/length(AF_Matrix)); %M√©dia dos valores da matriz
+    AF_Mean = (sum(AF_Matrix)/length(AF_Matrix)); %MÈdia dos valores da matriz
     set(handles.AdhesionForce,'string',num2str(AF_Mean));
     
-    %Obtendo a Constante El√°stica do conjunto alavanca amostra (K)
+    %Obtendo a Constante El·stica do conjunto alavanca amostra (K)
     flipY = flip(NumYaxis); %Invertendo o array das coordenadas Y,X para 
     flipX = flip(NumXaxis); %que o indice 1 seja a coordenada da origem.
     
     for i=1:1:length(MinYaxis)
         
-        minimumIndex(i) = find(flipY(1:length(flipY),i) == MinYaxis(i),1,'last');  %Obtendo a posi√ß√£o do ponto de m√≠nimo no array NumYaxis
-        lastIndex(i) = minimumIndex(length(minimumIndex)); %Indice do √∫ltimo n√∫mero do ponto m√≠nimo
-        IndexStart(i) = lastIndex(i) + 20; %Pequena dist√¢ncia do ponto de m√≠nimo para evitar oscila√ß√µes no in√≠cio da reta
-        IndexAnd(i) = length(NumYaxis); %√öltimo √≠ndice do array
-
-        Yend(i) = flipY(IndexAnd(i));
-        Ystart(i) = flipY(IndexStart(i));
-        Xend(i) =  flipX(IndexAnd(i));
-        Xstart(i) =  flipX(IndexStart(i));
-
-        kSample(i) = abs((Yend(i) - Ystart(i))/(Xend(i) - Xstart(i))); %Calculando a inclina√ß√£o da reta
-
-        %set(handles.ElastConstSample,'string',kSample); %Enviando para o usu√°rio a inclina√ß√£o da reta
-
+        %REFAZER ESSA PARTE DO K USANDO O POLYFIT E IMPLEMENTAR DEPOIS
+        %DESSE FOR
+     %   minimumIndex(i) = find(flipY(1:length(flipY),i) == MinYaxis(i),1,'last');  %Obtendo a posiÁ„o do ponto de mÌnimo no array NumYaxis
+     %   lastIndex(i) = minimumIndex(length(minimumIndex)); %Indice do ˙ltimo n˙mero do ponto mÌnimo
+     %   IndexStart(i) = lastIndex(i) + 20; %Pequena dist‚ncia do ponto de mÌnimo para evitar oscilaÁıes no inÌcio da reta
+      %  IndexAnd(i) = length(NumYaxis); %⁄ltimo Ìndice do array
+        
+       % Yend(i) = flipY(IndexAnd(i));
+        %Ystart(i) = flipY(IndexStart(i));
+        %Xend(i) =  flipX(IndexAnd(i));
+       % Xstart(i) =  flipX(IndexStart(i));
+        
+        %kSample(i) = abs((Yend(i) - Ystart(i))/(Xend(i) - Xstart(i))); %Calculando a inclinaÁ„o da reta
+                       
+        %Pegando somente o regime repulsivo
+        if i == 1
+            [NumXaxis, NumYaxis] = repulsiveReg(NumXaxis, NumYaxis, handles);
+        end
+        
+        if get(handles.Sample_on_Substrate,'Value')
+            %Obtendo o K do conjunto sonda amostra
+            x = NumXaxis(1:length(NumXaxis),i);
+            y = NumYaxis(1:length(NumYaxis),i);
+            kSample(i) = kIndent(x,y, handles); 
+        elseif get(handles.Suspended_Sample,'Value')
+            %Para amostras suspensas o K precisa ser calculado de acordo
+            %com o modelo adequando, por esse motivo ele n„o È calculado e
+            %È retornado o valor zero.
+            kSample(i) = 0;
+        end
+        
         %Salvando os valores de K dos ensaios das amostras em uma matriz
-
         line_K = 1;
         K_Matrix(line_K,1) = kSample(i);  %Salvando em uma matriz os valores de K
         line_K = line_K + 1;
-    
+        
         %Salvando NumXaxis e NumYaxis em uma matriz
         sizeX = size(NumXaxis);
         sizeX = sizeX(1);
         sizeY = size(NumYaxis);
         sizeY = sizeY(1);
-        identationMatrix(1:sizeX(1),1) = NumXaxis(1:sizeX(1),i);  %Preencho a matriz coluna 1 e linhas at√© o tamanho do arrayX
-        identationMatrix(1:sizeY(1),2) = NumYaxis(1:sizeY(1),i);  %Preencho a matriz coluna 2 e linhas at√© o tamanho do arrayY
-
-        %Salvando em uma matriz os valores de K e as For√ßas de todas as identa√ß√µes
-
-        K_Force_matrix(line_K_F_matrix, 1) = kSample(i); %A mudan√ßa de linha na matriz segue o n√∫mero referente a que arquivo est√° sendo processado no loop
+        identationMatrix(1:sizeX(1),1) = NumXaxis(1:sizeX(1),i);  %Preencho a matriz coluna 1 e linhas atÈ o tamanho do arrayX
+        identationMatrix(1:sizeY(1),2) = NumYaxis(1:sizeY(1),i);  %Preencho a matriz coluna 2 e linhas atÈ o tamanho do arrayY
+        
+        %Salvando em uma matriz os valores de K e as ForÁas de todas as identaÁıes
+        
+        K_Force_matrix(line_K_F_matrix, 1) = kSample(i); %A mudanÁa de linha na matriz segue o n˙mero referente a que arquivo est· sendo processado no loop
         K_Force_matrix(line_K_F_matrix, 2) = MinYaxis(i);
         line_K_F_matrix = line_K_F_matrix + 1;
         
         %Salvando os arquivos gerados em Excel
         save_name = get(handles.Archive_Name,'String');
         save_directory = get(handles.Select_Directory,'String');
-    
-        SaveFile(identationMatrix, i, save_name, save_directory, txtSize, K_Force_matrix); %Fun√ß√£o que salva
-    
-        %Salvando um arquivo Excel com o valor das contantes K e de For√ßa de
+        
+        SaveFile(identationMatrix, i, save_name, save_directory, txtSize, K_Force_matrix); %FunÁ„o que salva
+        
+        %Salvando um arquivo Excel com o valor das contantes K e de ForÁa de
         %cada experimento
         
     end
     
-    %Encontrando a m√©dia da Const. El√°tica da Amostra e a enviando  para o usu√°rio
+    %Encontrando a mÈdia da Const. El·tica da Amostra e a enviando  para o usu·rio
     
-    K_Mean = (sum(K_Matrix)/length(K_Matrix)); %M√©dia dos valores da matriz
+    K_Mean = (sum(K_Matrix)/length(K_Matrix)); %MÈdia dos valores da matriz
     set(handles.ElastConstSample,'string',num2str(K_Mean));
     
-    %Gerando o gr√°fico
+    
+    %Gerando o gr·fico
     
         figure(1)
         plot(NumXaxis,NumYaxis,'LineWidth',0.5)
-        ylabel('For√ßa (nN)'),xlabel('Deflex√£o vertical da amostra (nm)')
+        ylabel('ForÁa (nN)'),xlabel('Deflex„o vertical da amostra (nm)')
         title('Curva de AFM' + " " + graph_direction)
         grid on
         drawnow
     
     
     
-    txtIndex = txtIndex + 1; %Incrementando a vari√°vel do loop principal
+    txtIndex = txtIndex + 1; %Incrementando a vari·vel do loop principal
     
-    %Limpando as vari√°veis
+    %Limpando as vari·veis
     clear NumXaxis;
     clear NumYaxis;
     clear identationMatrix;
@@ -350,39 +379,13 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-function ConstS2_Callback(hObject, eventdata, handles)
-% hObject    handle to ConstS2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-S = str2double(get(handles.ConstS2,'string'));
-set(handles.ConstS2,'Value', S);
-
-% Hints: get(hObject,'String') returns contents of ConstS2 as text
-%        str2double(get(hObject,'String')) returns contents of ConstS2 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function ConstS2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to ConstS2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
 % --- Executes on button press in VoltRadioButtonY.
 function VoltRadioButtonY_Callback(hObject, eventdata, handles)
 % hObject    handle to VoltRadioButtonY (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set(handles.ConstS2,'Enable','off');  %Desativa a caixa de entrada para nm/A
-set(handles.ConstS,'Enable','on');    %Garante a ativa√ß√£o da caixa de entrada para nm/V
+set(handles.ConstS,'Enable','on');    %Garante a ativaÁ„o da caixa de entrada para nm/V
 
 % Hint: get(hObject,'Value') returns toggle state of VoltRadioButtonY
 
@@ -393,8 +396,7 @@ function mVRadioButtonY_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set(handles.ConstS2,'Enable','off');  %Desativa a caixa de entrada para n/A
-set(handles.ConstS,'Enable','on');    %Garante a ativa√ß√£o da caixa de entrada para n/V
+set(handles.ConstS,'Enable','on');    %Garante a ativaÁ„o da caixa de entrada para n/V
 
 Status = get(handles.mVRadioButtonY,'Value');
 set(handles.mVRadioButtonY,'Value', Status);
@@ -408,28 +410,12 @@ function nVRadioButtonY_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set(handles.ConstS2,'Enable','off');  %Desativa a caixa de entrada para nm/A
-set(handles.ConstS,'Enable','on');    %Garante a ativa√ß√£o da caixa de entrada para nm/V
+set(handles.ConstS,'Enable','on');    %Garante a ativaÁ„o da caixa de entrada para nm/V
 
 Status = get(handles.nVRadioButtonY,'Value');
 set(handles.nVRadioButtonY,'Value', Status);
 
-
-
 % Hint: get(hObject,'Value') returns toggle state of nVRadioButtonY
-
-
-% --- Executes on button press in AmpereRadioButtonY.
-function AmpereRadioButtonY_Callback(hObject, eventdata, handles)
-% hObject    handle to AmpereRadioButtonY (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-set(handles.ConstS2,'Enable','on');  %Ativa a caixa de entrada para nm/A
-set(handles.ConstS,'Enable','off');    %Desativa a caixa de entrada para nm/V
-
-% Hint: get(hObject,'Value') returns toggle state of AmpereRadioButtonY
-
 
 % --- Executes on button press in nmRadioButtonX.
 function nmRadioButtonX_Callback(hObject, eventdata, handles)
@@ -590,23 +576,23 @@ else
     disp(['User selected ', fullfile(path,file)]);
 end
 
-numb_sel_graph = length(file); %Obtendo quantos gr√°ficos foram selecionados
+numb_sel_graph = length(file); %Obtendo quantos gr·ficos foram selecionados
 
 
 for i = 1:1:numb_sel_graph
     hold on
     grid on
     figure(1)
-    directory = fullfile(path, file(i));        %Pega o diret√≥rio do arquivo
-    xls_archive = xlsread(string(directory));   %L√™ o arquivo excel e salva em xls_archive
+    directory = fullfile(path, file(i));        %Pega o diretÛrio do arquivo
+    xls_archive = xlsread(string(directory));   %LÍ o arquivo excel e salva em xls_archive
     
-    plot(flip(xls_archive(1:length(xls_archive),1)),flip(xls_archive(1:length(xls_archive),2))) %Plota os gr√°ficos
+    plot(flip(xls_archive(1:length(xls_archive),1)),flip(xls_archive(1:length(xls_archive),2))) %Plota os gr·ficos
     
 end
 
-ylabel('For√ßa (nN)'),xlabel('Deslocamento do piezo (nm)')
+ylabel('ForÁa (nN)'),xlabel('Deslocamento do piezo (nm)')
 title('Multiplas Curvas de AFM')
-legend(file) %Insere as legendas no gr√°fico
+legend(file) %Insere as legendas no gr·fico
 
 % --- Executes on button press in ImportData2.
 function ImportData2_Callback(hObject, eventdata, handles)
@@ -620,87 +606,11 @@ else
     disp(['User selected ', fullfile(path,file)]);
 end
 
-%Enviando o valor da vari√°vel pelo guidata
+%Enviando o valor da vari·vel pelo guidata
 
 handles.file = file;
 handles.path = path;
 guidata(hObject,handles)
-
-
-% --- Executes on button press in StartButton2.
-function StartButton2_Callback(hObject, eventdata, handles)
-% hObject    handle to StartButton2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-data = handles.file; %Recebe o valor da vari√°vel do guidata
-path = handles.path;
-
-xlsIndex = 1;
-aux = 1;
-
-archivesNumber = length(data); %Vari√°vel respons√°vel por receber o n√∫mero de arquivos selecionados
-directory = fullfile(path, data(1));
-xls_archive = xlsread(string(directory));
-
-while aux <= archivesNumber
-    i = 1;
-    directory = fullfile(path, data(i));
-    xls_archive = xlsread(string(directory));
-    while xlsIndex <= length(xls_archive)
-                  
-        NumXaxis(i,xlsIndex) = xls_archive(xlsIndex,1); %Seleciono o √≠ndice do vetor onde est√° a string que necessito e salvo em outro vetor
-        NumYaxis(i,xlsIndex) = xls_archive(xlsIndex,2);
-        
-        i = i + 1;
-        xlsIndex = xlsIndex + 1;
-    end
-    aux = aux + 1;
-end
-
-firstMatrix = NumXaxis(1:length(NumXaxis),1); %Preenchendo as matrizes 1 e 2 com os valores do 1¬∞ e 2¬∞ arquivo respectivamente;
-firstMatrix = NumYaxis(1:length(NumYaxis),1);
-secondMatrix = NumXaxis(1:length(NumXaxis),2);
-secondMatrix = NumYaxis(1:length(NumYaxis),2);
-
-minPointFirstMatrix = min(firstMatrix);
-minPointSecondMatrix = min(secondMatrix);
-
-if minPointFirstMatrix < minPointSecondMatrix     %Esse if tem a fun√ß√£o de decobrir qual matrix cont√©m o gr√°fico de ida e volta
-    matrixBack = firstMatrix;                     %Isso √© importante para realizar corretamente a integral e achar a √°rea correta
-    matrixOut = secondMatrix;
-else
-    matrixBack = secondMatrix;
-    matrixOut = firstMatrix;
-end
-
-energyDissipation = trapz(matrixBack,matrixOut) %Calculando a √°rea entre as curvas
-
-set(handles.EnergyDissipation,'string', energyDissipation); %Enviando para o usu√°rio a energia dissipada
-
-
-
-function EnergyDissipation_Callback(hObject, eventdata, handles)
-% hObject    handle to EnergyDissipation (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of EnergyDissipation as text
-%        str2double(get(hObject,'String')) returns contents of EnergyDissipation as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function EnergyDissipation_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to EnergyDissipation (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
 
 % --- Executes on button press in idaOuVolta.
 function idaOuVolta_Callback(hObject, eventdata, handles)
@@ -734,9 +644,9 @@ get(handles.StartButton1,'Value', identationMatrix)
 function SaveFile(identationMatrix, txtIndex, archiveName, directory, txtSize, K_Force_matrix)
 
 save_name = archiveName;
-save_name_concat = save_name + " " + num2str(txtIndex); %Aqui eu utilizo a vari√°vel txtIndex para enumerar os arquivos e salvar com nome diferentes
+save_name_concat = save_name + " " + num2str(txtIndex); %Aqui eu utilizo a vari·vel txtIndex para enumerar os arquivos e salvar com nome diferentes
 
-if (directory == "Diret√≥rio") %Verifica se foi selecionado um diret√≥rio
+if (directory == "DiretÛrio") %Verifica se foi selecionado um diretÛrio
     save_directory = uigetdir('C:\','Selecione uma pasta para salvar');
 else
     save_directory = directory;
@@ -747,26 +657,246 @@ if (txtIndex == txtSize)
     xlswrite(strcat(save_directory,'\',save_name + " (Ks and Forces)"), K_Force_matrix);
 end
 
-function  OffsetNum = Offset(NumYaxis)
+function  OffsetNum = Offset(NumYaxis,NumXaxis, handles)
+
+percentageInit = get(handles.Percentage_Start,'Value');
+percentageEnd = get(handles.Percentage_End,'Value');
 
 if NumYaxis(1) > NumYaxis(length(NumYaxis))
     
-    FlippedArrayY = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele est√° come√ßando do fim para o in√≠cio
-    
+    FlippedArrayY = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele est· comeÁando do fim para o inÌcio
+    FlippedArrayX = flip(NumXaxis);
 else
     FlippedArrayY = NumYaxis;
+    FlippedArrayX = NumXaxis;
 end
 
-averageY = sum(FlippedArrayY(1:1))/1;  %Fa√ßo a m√©dia com os 150 primeiros valores
+valueInit = round((percentageInit/100) * length(FlippedArrayY)); %PosiÁ„o correspondente a porcentagem inicial
+valueEnd = round((percentageEnd/100) * length(FlippedArrayY)); %PosiÁ„o correspondente a porcentagem final
 
-if averageY < 0        %Se a m√©dia for negativa eu somo a m√©dia no vetor
+for i=1:length(FlippedArrayY)
+    if isnan(FlippedArrayY(i,1))
+        FlippedArrayX(i:length(FlippedArrayY),1) = 0;
+        FlippedArrayY(i:length(FlippedArrayY),1) = 0;
+        break
+    end
+end
+
+%aux = FlippedArrayY(valueInit:valueEnd);
+%yRangeMean = sum(aux)/length(aux);
+
+aux_2 = size(FlippedArrayY);
+aux_2 = aux_2(2);
+
+for i=1:aux_2
+    x = FlippedArrayX(1:length(FlippedArrayX),i);
+    y = FlippedArrayY(1:length(FlippedArrayY),i);
+    p1 = polyfit(x,y,1);
+    yFitOffSet = p1(2);
     
-    OffsetNum = -1 * averageY;     %Aplicando o offset com o valor da m√©dia
-    
-else %Caso contr√°rio eu subtraio a m√©dia no vetor
-    OffsetNum = -1 * averageY;
+    if yFitOffSet < 0        %Se a mÈdia for negativa eu somo a mÈdia no vetor
+        
+        auxOffsetNum = -1 * yFitOffSet;     %Aplicando o offset com o valor da mÈdia
+        OffsetNum(1:length(NumYaxis),i) = NumYaxis(1:length(NumYaxis),i) + auxOffsetNum;
+        
+    else %Caso contr·rio eu subtraio a mÈdia no vetor
+        auxOffsetNum = -1 * yFitOffSet;
+        OffsetNum(1:length(NumYaxis),i) = NumYaxis(1:length(NumYaxis),i) + auxOffsetNum;
+    end
 end
 
 
+%A funÁ„o abaixo separa somente o regime repulsivo da identaÁ„o
+function [newXAxis, newYAxis] = repulsiveReg(xAxis, yAxis, handles)
+
+numArc = size(yAxis);
+numArc = numArc(2); %Vari·vel que recebe o n˙mero de arquivos importados
+
+%if(yAxis(length(yAxis))> yAxis(1))
+%    yAxis = flip(yAxis); %Tem que dar um jeito pra quando for gr·fico de ida
+%end
+
+for i=1:1:numArc
+    auxY = yAxis(1:length(yAxis),i);
+    auxX = xAxis(1:length(xAxis),i);
+    %A condiÁ„o abaixo faz um teste para saber se a matriz est· na ordem
+    %crescente, caso n„o esteja a matriz È invertida. A condiÁ„o para inverÁ„o
+    %compara o primeiro elemento com o elemento 10% ‡ frente dele.
+    if auxY(i) > auxY(round((length(auxY)/10)))
+        yAxis(1:length(yAxis),i) = flip(auxY);    
+        xAxis(1:length(xAxis),i) = flip(auxX);
+    end
+end
+
+for i=1:1:numArc
+    minValue = min(yAxis);
+    minValue = minValue(i); %Ponto de minimo de cada vetor coluna
+    minIndex = find(yAxis(1:length(yAxis),i) == minValue);  %PosiÁ„o do menor valor
+    minIndex = minIndex(length(minIndex));
+    
+    auxNewYAxis = yAxis(minIndex:length(yAxis),i);
+    auxIndex = find(auxNewYAxis >= 0);
+    auxIndex = auxIndex(1);    
+    auxNewXAxis = xAxis(minIndex:length(yAxis),i);
+        
+    newYAxis(1:length(auxNewYAxis)-auxIndex+1,i) = auxNewYAxis(auxIndex:length(auxNewYAxis),1);    
+    newXAxis(1:length(auxNewXAxis)-auxIndex+1,i) = auxNewXAxis(auxIndex:length(auxNewYAxis),1);      
+end
+
+%Salvando nas matrizes somente os valores maiores que zero apÛs o gr·fico
+%interceptar o eixo X.
+for i=1:1:numArc
+    for j=1:1:length(newYAxis)
+        if newYAxis(j,i) == 0
+            newYAxis(j,i) = NaN;
+            newXAxis(j,i) = NaN;
+        end
+    end
+end
+
+% --- Executes on button press in Curve_Visualizer.
+function Curve_Visualizer_Callback(hObject, eventdata, handles)
+% hObject    handle to Curve_Visualizer (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+[file,path] = uigetfile('*.txt', 'MultiSelect', 'off');
+if isequal(file,0)
+    disp('User selected Cancel');
+else
+    disp(['User selected ', fullfile(path,file)]);
+end
+
+txtIndex = 1;
+txtSize = length(file);
+
+while txtIndex <= txtSize
+    
+    auxChangeLine = true;
+    i = 1;
+    j = 1;
+    
+    mFile = fopen(string(file),'r'); %AtenÁ„o o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e Ò file(x)
+    TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+    
+    while auxChangeLine  %While respons·vel em pegar cada elemento do .txt e salvar em um vetor
+        
+        TakeLineThenStep = fgetl(mFile);
+       
+        if TakeLineThenStep ~= -1  %Essa condiÁ„o verifica se chegou ao final do arquivo .txt
+            %Vari·vel i s„o as linhas da matriz, j s„o as colunas
+            %Coluna 1 referente ao .txt 1 coluna 2 referente ao .txt 2...
+            stringNum = regexp(TakeLineThenStep, '\t', 'split'); %Muda de linha no arquivo .txt e separa as strings do vetor
+            NumXaxis(i,j) = str2double(stringNum(1)); %Seleciono o Ìndice do vetor onde est· a string que necessito e salvo em outro vetor
+            NumYaxis(i,j) = str2double(stringNum(2));
+        else
+            auxChangeLine = false;
+        end
+     
+        i = i + 1;
+    end
+    txtIndex = txtIndex + 1;
+    j = j + 1;
+end
+
+figure
+txt_archive(1:length(NumYaxis),1) = 0:100/(length(NumYaxis)-1):100; %Crio o eixo X em funÁ„o do tamanho do arquivo
+txt_archive(1:length(NumYaxis),2) = NumYaxis;                       %para representar a porcentagem dos dados
+    
+plot(txt_archive(1:length(txt_archive),1),flip(txt_archive(1:length(txt_archive),2))) %Plota o gr·fico
+
+ylabel('Eixo Y'),xlabel('Porcentagem do arquivo')
+title('Curva de AFM')
+legend(file) %Insere as legendas no gr·fico
+grid on
+drawnow
 
 
+% --- Executes on button press in Suspended_Sample.
+function Suspended_Sample_Callback(hObject, eventdata, handles)
+% hObject    handle to Suspended_Sample (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of Suspended_Sample
+
+
+% --- Executes on button press in Sample_on_Substrate.
+function Sample_on_Substrate_Callback(hObject, eventdata, handles)
+% hObject    handle to Sample_on_Substrate (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of Sample_on_Substrate
+
+function Percentage_Start_Callback(hObject, eventdata, handles)
+% hObject    handle to Percentage_Start (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+Init = str2double(get(handles.Percentage_Start,'String'));
+set(handles.Percentage_Start,'Value',Init);
+
+
+
+% --- Executes during object creation, after setting all properties.
+function Percentage_Start_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Percentage_Start (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function Percentage_End_Callback(hObject, eventdata, handles)
+% hObject    handle to Percentage_End (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+End = str2double(get(handles.Percentage_End,'String'));
+set(handles.Percentage_End,'Value',End);
+
+
+% --- Executes during object creation, after setting all properties.
+function Percentage_End_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Percentage_End (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function Suspended_Sample_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Suspended_Sample (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+function kSample = kIndent(NumXaxis,NumYaxis, ~)
+for i=1:1:length(NumXaxis)
+    if ~isnan(NumXaxis(i))
+        x = NumXaxis(i);
+        y = NumYaxis(i);
+    end
+end
+p1 = polyfit(x,y,1);
+kSample = p1(1);
+
+function response = checkInput(handles)
+if get(handles.Archive_Name,'String') == ""
+    response = 1;
+elseif get(handles.ConstS,'String') == ""
+    response = 1;
+elseif get(handles.ConstK,'String') == ""
+    response = 1;
+elseif get(handles.Percentage_Start,'String') == ""
+    response = 1;
+elseif get(handles.Percentage_End,'String') == ""
+    response = 1;
+end
