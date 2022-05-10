@@ -67,7 +67,6 @@ set(handles.Sample_on_Substrate,'Value', 1);
 % UIWAIT makes Programa_AFM wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
-
 % --- Outputs from this function are returned to the command line.
 function varargout = Programa_AFM_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -77,7 +76,6 @@ function varargout = Programa_AFM_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
-
 
 % --- Executes on button press in ImportData1.
 function ImportData1_Callback(hObject, eventdata, handles)
@@ -105,19 +103,19 @@ function StartButton1_Callback(hObject, eventdata, handles)
 
 %Tratamento de erros do usuário
 if checkInput(handles)
-    errordlg("Todos os campos devem ser preenchidos!");
+    warndlg("Todos os campos devem ser preenchidos!","ALERTA");
     return
 end
 
 try 
     file = handles.file; %Recebe o valor da variável do guidata   
 catch
-    errordlg("Nenhum dado foi importado!!!");
+    warndlg("Nenhum dado foi importado!!!","ALERTA");
     return;
 end
 
 if get(handles.Select_Directory,'String') == "Diretório"
-    errordlg("Nenhum diretório foi selecionado!");
+     warndlg("Nenhum diretório foi selecionado!","ALERTA");
     return;
 end
 
@@ -144,7 +142,13 @@ while txtIndex <= txtSize
     i = 1;
     
     mFile = fopen(string(file(txtIndex)),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
-    TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+   
+    try
+        TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+    catch
+         warndlg("Você deve selecionar pelo menos 2 arquivos!","ATENÇÃO");
+        return;
+    end
     
     while auxChangeLine  %While responsável em pegar cada elemento do .txt e salvar em um vetor
         
@@ -170,15 +174,13 @@ end
 %delas é maior que a outra, o que causa problemas por inserir valores
 %inexistentes no arquivo inicial.
 
-for i=1:length(NumXaxis)  
-    if NumXaxis(i,1) == 0
-        NumXaxis(i:length(NumXaxis),1) = nan;
-        NumYaxis(i:length(NumYaxis),1) = nan;
-        break
-    elseif NumXaxis(i,2) == 0
-        NumXaxis(i:length(NumXaxis),2) = nan;
-        NumYaxis(i:length(NumYaxis),2) = nan;
-        break
+for j=1:txtSize
+    for i=1:length(NumXaxis)    
+        if NumXaxis(i:length(NumXaxis),j) == 0
+            NumXaxis(i:length(NumXaxis),j) = nan;
+            NumYaxis(i:length(NumYaxis),j) = nan;
+            break       
+        end
     end
 end
 
@@ -194,15 +196,51 @@ ida_e_volta = get(handles.ida_e_volta,'Value');
     else  
         %Teste para saber se é o gráfico de ida
         %Em seguida é somado o quanto de offset é necessário.
-        NumXaxis = flip(NumXaxis);
-       
-        if NumYaxis(1,1) < NumYaxis(length(NumYaxis),1)
+        %NumXaxis = flip(NumXaxis);
+        j1 = 1;  %Variáveis auxiliares
+        j2 = 1;
+        k1 = 1;
+        k2 = 1;
+        x = 0;
+        y = 0;
+        
+        %O for abaixo tem a finalidade de não deixar que o valor NaN fique
+        %nas posições iniciais da matriz, se isso não for tratado na função
+        %do offset os primeiros valores do vetor não serão numeros e
+        %teremos ao fim do programa um matriz somemte de NaN
+        for i=1:1:length(NumXaxis)
+            if ~isnan(NumXaxis(i,1))
+                x(j1,1) = NumXaxis(i,1);
+                j1 = j1 + 1;
+            end
+            if ~isnan(NumYaxis(i,1))
+                y(k1,1) = NumYaxis(i,1);
+                k1 = k1 + 1;
+            end
+            if ~isnan(NumXaxis(i,2))
+                x(j2,2) = NumXaxis(i,2);
+                j2 = j2 + 1;
+            end
+            if ~isnan(NumYaxis(i,2))
+                y(k2,2) = NumYaxis(i,2);
+                k2 = k2 + 1;
+            end                       
+        end
+        
+        %Se x e/ou y não for 0 quer dizer que haviam NaNs e que a matriz mudou
+        if x ~= 0
+            NumXaxis = x;
+        elseif y ~= 0
+            NumYaxis = y;
+        end
+        
+   %     if NumYaxis(1,1) < NumYaxis(length(NumYaxis),1)
           % NumAux = NumYaxis(1:length(NumYaxis),1);
-           NumYaxis = Offset(NumYaxis,NumXaxis, handles);   
-        elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis),2)
+        %   NumYaxis = Offset(NumYaxis,NumXaxis, handles);   
+       % elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis),2)
            % NumAux = NumYaxis(1:length(NumYaxis),2);
             NumYaxis = Offset(NumYaxis,NumXaxis, handles);         
-        end       
+       % end       
     end
     
     %Convertendo os submultiplos de Volt/Ampere
@@ -679,20 +717,43 @@ function  OffsetNum = Offset(NumYaxis,NumXaxis, handles)
 percentageInit = get(handles.Percentage_Start,'Value');
 percentageEnd = get(handles.Percentage_End,'Value');
 
-if NumYaxis(1) > NumYaxis(length(NumYaxis))
+FlippedArrayY = NumYaxis;
+FlippedArrayX = NumXaxis;
+        
+auxSize = size(NumYaxis);
+lastNumberIndex = length(NumXaxis);
+aux = true;
+
+for i=1:auxSize(2)
     
-    FlippedArrayY = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele está começando do fim para o início
-    FlippedArrayX = flip(NumXaxis);
-else
-    FlippedArrayY = NumYaxis;
-    FlippedArrayX = NumXaxis;
+    %Aqui é verificado se os números do fim para o início são NaN, caso
+    %afirmativo a variável lastNumber é decrementada de 1 em 1 até chegar
+    %em um valor que não seja NaN e que é realmente o último número
+    while aux
+        if ~isnan(NumXaxis(lastNumberIndex,i))
+            if NumXaxis(1,i) > NumXaxis(lastNumberIndex,i)               
+                FlippedArrayY(1:lastNumberIndex,i) = flip(NumYaxis(1:lastNumberIndex,i));  %Inverte a ordem do vetor, pois ele está começando do fim para o início
+                FlippedArrayX(1:lastNumberIndex,i) = flip(NumXaxis(1:lastNumberIndex,i));                              
+                aux = false;
+            else
+                aux = false;
+            end
+        else
+            lastNumberIndex = lastNumberIndex - 1;
+        end
+    end
+    %Aqui é utilizada a posição que o lastNumberIndex contém para definir
+    %os pontos iniciais e finais usar length(NumXaxis) não dá certo para os
+    %casos em que as colunas possuírem número de linhas diferentes. A
+    %primeira linha de valueInit armazena o inpicio da faixa.
+    valueInit(1,i) = round((percentageInit/100) * lastNumberIndex) + 1; %Posição correspondente a porcentagem inicial
+    valueEnd(2,i) = round((percentageEnd/100) * lastNumberIndex); %Posição correspondente a porcentagem final
+    aux = true;
+    lastNumberIndex = length(NumXaxis);
 end
 
 numFiles = size(NumYaxis);
 numFiles = numFiles(2);
-
-valueInit = round((percentageInit/100) * length(FlippedArrayY)) + 1; %Posição correspondente a porcentagem inicial
-valueEnd = round((percentageEnd/100) * length(FlippedArrayY)); %Posição correspondente a porcentagem final
 
 %Laço for responsável por tirar os NaNs do arquivo para evitar erro quando
 %for realizar o cálculo da equação da reta
@@ -713,8 +774,8 @@ aux_2 = size(FlippedArrayY);
 aux_2 = aux_2(2);
 
 for i=1:aux_2
-    x = FlippedArrayX(valueInit:valueEnd,i);
-    y = FlippedArrayY(valueInit:valueEnd,i);
+    x = FlippedArrayX(valueInit(1,i):valueEnd(2,i),i);
+    y = FlippedArrayY(valueInit(1,i):valueEnd(2,i),i);
     p1 = polyfit(x,y,1);
     yFitOffSet = p1(2);
     
@@ -760,7 +821,15 @@ for i=1:1:numArc
     
     auxNewYAxis = yAxis(minIndex:length(yAxis),i);
     auxIndex = find(auxNewYAxis >= 0);
-    auxIndex = auxIndex(1);    
+    
+    %A condição abaixo tenta evitar definir o começo de um falso regime
+    %repulsivo, isso pode acontecer com sinais ruidosos onde um ponto pode
+    %ser de força positiva e em sequencia voltar a ser negativo. 
+    if auxIndex(1) == (auxIndex(1) + 1)
+        auxIndex = auxIndex(1);  
+    else
+        auxIndex = auxIndex(2);
+    end
     auxNewXAxis = xAxis(minIndex:length(xAxis),i);
         
     newYAxis(1:length(auxNewYAxis)-auxIndex+1,i) = auxNewYAxis(auxIndex:length(auxNewYAxis),1);    
