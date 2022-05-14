@@ -9,7 +9,7 @@ function varargout = Programa_AFM(varargin)
 %      PROGRAMA_AFM('CALLBACK',hObject,eventData,handles,...) calls the local
 %      function named CALLBACK in PROGRAMA_AFM.M with the given input arguments.
 %
-%      PROGRAMA_AFM('Property','Value',...) creates a new PROGRAMA_AFM or raises the
+%      PROGRAMA_AFM('Property','Vaa funlue',...) creates a new PROGRAMA_AFM or raises the
 %      existing singleton*.  Starting from the left, property value pairs
 %      are
 %      applied to the GUI before Programa_AFM_OpeningFcn gets called.  An
@@ -102,35 +102,31 @@ function StartButton1_Callback(hObject, eventdata, handles)
 
 %Tratamento de erros do usuário
 if checkInput(handles)
-    warndlg("Todos os campos devem ser preenchidos!","ALERTA");
+    warndlg("Todos os campos devem ser preenchidos! OBS: (O campo Nome do arquivo é opcional)","ALERTA");
     return
 end
 
 try
-    file = handles.file; %Recebe o valor da variável do guidata
+    file = handles.file; %Recebe o valor  a prda variável do guidata
 catch
-    warndlg("Nenhum dado foi importado!!!","ALERTA");
+    warndlg("Nenhum arquivo foi importado!!!","ALERTA");
     return;
 end
 
-if get(handles.Select_Directory,'String') == "Diretório"
+dir = get(handles.Select_Directory,'String');
+
+if dir == "Diretório Salvar"
     warndlg("Nenhum diretório foi selecionado!","ALERTA");
     return;
 end
 
 ConstS = get(handles.ConstS,'Value');
-
 ConstK = get(handles.ConstK,'Value');
 graph_direction = get(handles.GraphDirection,'String');  %Recebe a string do sentido do gráfico
 
 txtIndex = 1;
 
 txtSize = length(file); %Variável responsável por receber o número de arquivos selecionados
-
-%if get(handles.ida_e_volta,'Value') == 1 && txtSize > 2
-%    warndlg("Com a opção ida e volta ativada selecionar somente 2 arquivos!","ALERTA");
-%    return;
-%end
 
 %Colocando título nas duas colunas da matriz
 K_Force_matrix(1,1) = "K Amostra";
@@ -293,7 +289,7 @@ for i=1:1:length(MinYaxis)
     comma = FileName == '.';
     FileName(comma) = '_'; %Onde houver pontos substitui por _
     FileName = string(FileName);
-    save_name = get(handles.Archive_Name,'String')+ FileName;
+    save_name = get(handles.Archive_Name,'String') + FileName;
     save_directory = get(handles.Select_Directory,'String');
     save_name_full_curve = get(handles.Archive_Name,'String') + FileName + "Curva Completa";
     save_directory = get(handles.Select_Directory,'String');
@@ -520,7 +516,12 @@ function Select_Directory_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 save_directory = uigetdir('C:\','Selecione uma pasta para salvar');
-set(handles.Select_Directory,'String',save_directory);
+
+if save_directory == 0
+    return;
+else
+    set(handles.Select_Directory,'String',save_directory);
+end
 
 % Hints: get(hObject,'String') returns contents of Select_Directory as text
 %        str2double(get(hObject,'String')) returns contents of Select_Directory as a double
@@ -645,7 +646,7 @@ get(handles.StartButton1,'Value', identationMatrix)
 function SaveFile(identationMatrix, txtIndex, archiveName, directory, txtSize, K_Force_matrix)
 
 save_name = archiveName;
-save_name_concat = save_name + " " + num2str(txtIndex); %Aqui eu utilizo a variável txtIndex para enumerar os arquivos e salvar com nome diferentes
+save_name_concat = save_name + "_tratado"; %Aqui eu utilizo a variável txtIndex para enumerar os arquivos e salvar com nome diferentes
 
 if (directory == "Diretório") %Verifica se foi selecionado um diretório
     save_directory = uigetdir('C:\','Selecione uma pasta para salvar');
@@ -820,7 +821,13 @@ while txtIndex <= txtSize
     j = 1;
     
     mFile = fopen(string(file),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
-    TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+    
+    try 
+        TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+    catch
+        return;
+    end
+    
     
     while auxChangeLine  %While responsável em pegar cada elemento do .txt e salvar em um vetor
         
@@ -942,9 +949,7 @@ p1 = polyfit(x,y,1);
 kSample = p1(1);
 
 function response = checkInput(handles)
-if get(handles.Archive_Name,'String') == ""
-    response = 1;
-elseif get(handles.ConstS,'String') == ""
+if get(handles.ConstS,'String') == ""
     response = 1;
 elseif get(handles.ConstK,'String') == ""
     response = 1;
