@@ -9,7 +9,7 @@ function varargout = Programa_AFM(varargin)
 %      PROGRAMA_AFM('CALLBACK',hObject,eventData,handles,...) calls the local
 %      function named CALLBACK in PROGRAMA_AFM.M with the given input arguments.
 %
-%      PROGRAMA_AFM('Property','Value',...) creates a new PROGRAMA_AFM or raises the
+%      PROGRAMA_AFM('Property','Vaa funlue',...) creates a new PROGRAMA_AFM or raises the
 %      existing singleton*.  Starting from the left, property value pairs
 %      are
 %      applied to the GUI before Programa_AFM_OpeningFcn gets called.  An
@@ -60,7 +60,6 @@ handles.output = hObject;
 guidata(hObject, handles);
 %Definição das condições iniciais do programa
 set(handles.VoltRadioButtonY,'Value', 1);
-set(handles.idaOuVolta,'Value', 1);
 set(handles.Sample_on_Substrate,'Value', 1);
 
 
@@ -103,24 +102,25 @@ function StartButton1_Callback(hObject, eventdata, handles)
 
 %Tratamento de erros do usuário
 if checkInput(handles)
-    warndlg("Todos os campos devem ser preenchidos!","ALERTA");
+    warndlg("Todos os campos devem ser preenchidos! OBS: (O campo Nome do arquivo é opcional)","ALERTA");
     return
 end
 
-try 
-    file = handles.file; %Recebe o valor da variável do guidata   
+try
+    file = handles.file; %Recebe o valor  a prda variável do guidata
 catch
-    warndlg("Nenhum dado foi importado!!!","ALERTA");
+    warndlg("Nenhum arquivo foi importado!!!","ALERTA");
     return;
 end
 
-if get(handles.Select_Directory,'String') == "Diretório"
-     warndlg("Nenhum diretório foi selecionado!","ALERTA");
+dir = get(handles.Select_Directory,'String');
+
+if dir == "Diretório Salvar"
+    warndlg("Nenhum diretório foi selecionado!","ALERTA");
     return;
 end
 
 ConstS = get(handles.ConstS,'Value');
-    
 ConstK = get(handles.ConstK,'Value');
 graph_direction = get(handles.GraphDirection,'String');  %Recebe a string do sentido do gráfico
 
@@ -142,18 +142,18 @@ while txtIndex <= txtSize
     i = 1;
     
     mFile = fopen(string(file(txtIndex)),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
-   
+    
     try
         TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
     catch
-         warndlg("Você deve selecionar pelo menos 2 arquivos!","ATENÇÃO");
+        warndlg("Você deve selecionar pelo menos 2 arquivos!","ATENÇÃO");
         return;
     end
     
     while auxChangeLine  %While responsável em pegar cada elemento do .txt e salvar em um vetor
         
         TakeLineThenStep = fgetl(mFile);
-   
+        
         if TakeLineThenStep ~= -1  %Essa condição verifica se chegou ao final do arquivo .txt
             %Variável i são as linhas da matriz, j são as colunas
             %Coluna 1 referente ao .txt 1 coluna 2 referente ao .txt 2...
@@ -163,7 +163,7 @@ while txtIndex <= txtSize
         else
             auxChangeLine = false;
         end
-     
+        
         i = i + 1;
     end
     txtIndex = txtIndex + 1;
@@ -175,215 +175,161 @@ end
 %inexistentes no arquivo inicial.
 
 for j=1:txtSize
-    for i=1:length(NumXaxis)    
+    for i=1:length(NumXaxis)
         if NumXaxis(i:length(NumXaxis),j) == 0
             NumXaxis(i:length(NumXaxis),j) = nan;
             NumYaxis(i:length(NumYaxis),j) = nan;
-            break       
+            break
         end
     end
 end
 
 txtIndex = 1; %Volto o valor da variável para usar no segundo loop
+
+%Aplicando o offset no gráfico eixo Y
+NumYaxis = Offset(NumYaxis,NumXaxis, handles); %Função que aplica o offset
+
+%Convertendo os submultiplos de Volt/Ampere
+if(get(handles.nVRadioButtonY,'Value'))
+    NumXaxis = NumXaxis * 10^9;
+    NumYaxis = NumYaxis * 10^9;
+end
+if(get(handles.mVRadioButtonY,'Value'))
+    NumXaxis = NumXaxis * 10^3;
+    NumYaxis = NumYaxis * 10^3;
+end
+
+%Convertendo de Volt para nm
+K = ConstK; %N/m ou N/A
+S = ConstS; %nm/V ou nm/A
+NumYaxis = NumYaxis * S;
+
+%Convertendo de Volt para nm
+NumXaxis = NumXaxis * S;
+
+%A condição abaixo verifica se o radioButton para amostra suspensa está
+%marcado e caso verdade o eixo X é convertido para deslocamento
+%vertical da amostra, dessa forma é descontada a deflexão da alavanca
+%no momento que ela aplica força.
+if get(handles.Suspended_Sample,'Value')
     
-ida_e_volta = get(handles.ida_e_volta,'Value');
+    %Convertendo o eixo X de deslocamento do piezo para deslocamento
+    %vertical da amostra.
+    NumXaxis = NumXaxis - NumYaxis; %OBS: Essa subtração esta fazendo o gráfico ficar em x negativo
+end
+
+%Convertendo o eixo Y para força
+NumYaxis = NumYaxis * K;
+
+%Obtendo a força de adesão
+MinYaxis = min(NumYaxis);  %Encontra o ponto de mínimo no Array
+% set(handles.AdhesionForce,'string',num2str(MinYaxis)); %Envia para a tela o valor de mínimo
+
+%Salvando a força de adesão dos ensaios da amostra em uma matriz
+
+AF_Matrix = MinYaxis;  %Salvando em uma matriz os valores de K
+
+%Encontrando a média da Força de Adesão e a enviando  para o usuário
+
+AF_Mean = (sum(AF_Matrix)/length(AF_Matrix)); %Média dos valores da matriz
+set(handles.AdhesionForce,'string',num2str(AF_Mean));
+
+%Obtendo a Constante Elástica do conjunto alavanca amostra (K)
+flipY = flip(NumYaxis); %Invertendo o array das coordenadas Y,X para
+flipX = flip(NumXaxis); %que o indice 1 seja a coordenada da origem.
+
+for i=1:1:length(MinYaxis)
     
-    if ida_e_volta == false
-        
-        %Aplicando o offset no gráfico eixo Y        
-        NumYaxis = Offset(NumYaxis,NumXaxis, handles); %Função que aplica o offset
-               
-    else  
-        %Teste para saber se é o gráfico de ida
-        %Em seguida é somado o quanto de offset é necessário.
+    %Pegando somente o regime repulsivo
+    if i == 1
+        allNumXaxis = NumXaxis;
+        allNumYaxis = NumYaxis;
+        [NumXaxis, NumYaxis] = repulsiveReg(NumXaxis, NumYaxis, handles);
+    end
+    
+    if get(handles.Sample_on_Substrate,'Value')
+        %Obtendo o K do conjunto sonda amostra
+        x = NumXaxis(1:length(NumXaxis),i);
+        y = NumYaxis(1:length(NumYaxis),i);
+        kSample(i) = kIndent(x,y, handles);
+    elseif get(handles.Suspended_Sample,'Value')
+        %Para amostras suspensas o K precisa ser calculado de acordo
+        %com o modelo adequando, por esse motivo ele não é calculado e
+        %é retornado o valor zero.
         %NumXaxis = flip(NumXaxis);
-        j1 = 1;  %Variáveis auxiliares
-        j2 = 1;
-        k1 = 1;
-        k2 = 1;
-        x = 0;
-        y = 0;
-        
-        %O for abaixo tem a finalidade de não deixar que o valor NaN fique
-        %nas posições iniciais da matriz, se isso não for tratado na função
-        %do offset os primeiros valores do vetor não serão numeros e
-        %teremos ao fim do programa um matriz somemte de NaN
-        for i=1:1:length(NumXaxis)
-            if ~isnan(NumXaxis(i,1))
-                x(j1,1) = NumXaxis(i,1);
-                j1 = j1 + 1;
-            end
-            if ~isnan(NumYaxis(i,1))
-                y(k1,1) = NumYaxis(i,1);
-                k1 = k1 + 1;
-            end
-            if ~isnan(NumXaxis(i,2))
-                x(j2,2) = NumXaxis(i,2);
-                j2 = j2 + 1;
-            end
-            if ~isnan(NumYaxis(i,2))
-                y(k2,2) = NumYaxis(i,2);
-                k2 = k2 + 1;
-            end                       
-        end
-        
-        %Se x e/ou y não for 0 quer dizer que haviam NaNs e que a matriz mudou
-        if x ~= 0
-            NumXaxis = x;
-        elseif y ~= 0
-            NumYaxis = y;
-        end
-        
-   %     if NumYaxis(1,1) < NumYaxis(length(NumYaxis),1)
-          % NumAux = NumYaxis(1:length(NumYaxis),1);
-        %   NumYaxis = Offset(NumYaxis,NumXaxis, handles);   
-       % elseif NumYaxis(1,2) < NumYaxis(length(NumYaxis),2)
-           % NumAux = NumYaxis(1:length(NumYaxis),2);
-            NumYaxis = Offset(NumYaxis,NumXaxis, handles);         
-       % end       
+        kSample(i) = 0;
     end
     
-    %Convertendo os submultiplos de Volt/Ampere
-    if(get(handles.nVRadioButtonY,'Value'))
-        NumXaxis = NumXaxis * 10^9;
-        NumYaxis = NumYaxis * 10^9;
-    end
-    if(get(handles.mVRadioButtonY,'Value'))
-        NumXaxis = NumXaxis * 10^3;
-        NumYaxis = NumYaxis * 10^3;
-    end
+    %Salvando os valores de K dos ensaios das amostras em uma matriz
+    line_K = 1;
+    K_Matrix(line_K,1) = kSample(i);  %Salvando em uma matriz os valores de K
+    line_K = line_K + 1;
     
-    %Convertendo de Volt para nm
-    K = ConstK; %N/m
-    S = ConstS; %N/V
-    NumYaxis = NumYaxis * S;
+    %Salvando NumXaxis e NumYaxis em uma matriz
+    sizeX = size(NumXaxis);
+    sizeX = sizeX(1);
+    sizeY = size(NumYaxis);
+    sizeY = sizeY(1);
+    identationMatrix(1:sizeX(1),1) = NumXaxis(1:sizeX(1),i);  %Preencho a matriz coluna 1 e linhas até o tamanho do arrayX
+    identationMatrix(1:sizeY(1),2) = NumYaxis(1:sizeY(1),i);  %Preencho a matriz coluna 2 e linhas até o tamanho do arrayY
     
-    %Convertendo de Volt para nm
-    NumXaxis = NumXaxis * S;
+    sizeXall = size(allNumXaxis);
+    fullIdentMatrix(1:sizeXall(1),1) = allNumXaxis(1:sizeXall(1),i);
+    fullIdentMatrix(1:sizeXall(1),2) = allNumYaxis(1:sizeXall(1),i);
     
-    %A condição abaixo verifica se o radioButton para amostra suspensa está
-    %marcado e caso verdade o eixo X é convertido para deslocamento
-    %vertical da amostra, dessa forma é descontada a deflexão da alavanca
-    %no momento que ela aplica força.
-    if get(handles.Suspended_Sample,'Value') 
-        
-        %Convertendo o eixo X de deslocamento do piezo para deslocamento
-        %vertical da amostra.
-        NumXaxis = NumXaxis - NumYaxis; %OBS: Essa subtração esta fazendo o gráfico ficar em x negativo
-    end
+    %Salvando em uma matriz os valores de K e as Forças de todas as identações
     
-    %Convertendo o eixo Y para força
-    NumYaxis = NumYaxis * K;
+    K_Force_matrix(line_K_F_matrix, 1) = kSample(i); %A mudança de linha na matriz segue o número referente a que arquivo está sendo processado no loop
+    K_Force_matrix(line_K_F_matrix, 2) = MinYaxis(i);
+    line_K_F_matrix = line_K_F_matrix + 1;
     
-    %Obtendo a força de adesão
-    MinYaxis = min(NumYaxis);  %Encontra o ponto de mínimo no Array
-    % set(handles.AdhesionForce,'string',num2str(MinYaxis)); %Envia para a tela o valor de mínimo
+    %Salvando os arquivos gerados em Excel
+    FileName = char(file(i));
+    FileName = FileName(1:length(FileName));
+    comma = FileName == '.';
+    FileName(comma) = '_'; %Onde houver pontos substitui por _
+    FileName = string(FileName);
+    save_name = get(handles.Archive_Name,'String') + FileName;
+    save_directory = get(handles.Select_Directory,'String');
+    save_name_full_curve = get(handles.Archive_Name,'String') + FileName + "Curva Completa";
+    save_directory = get(handles.Select_Directory,'String');
     
-    %Salvando a força de adesão dos ensaios da amostra em uma matriz
+    SaveFile(fullIdentMatrix, i, save_name_full_curve, save_directory, txtSize); %Função que salva o gráfico completo
+    SaveFile(identationMatrix, i, save_name, save_directory, txtSize, K_Force_matrix); %Função que salva somemnte repulsivo
     
-    AF_Matrix = MinYaxis;  %Salvando em uma matriz os valores de K
+    %Salvando um arquivo Excel com o valor das contantes K e de Força de
+    %cada experimento
     
-    %Encontrando a média da Força de Adesão e a enviando  para o usuário
-    
-    AF_Mean = (sum(AF_Matrix)/length(AF_Matrix)); %Média dos valores da matriz
-    set(handles.AdhesionForce,'string',num2str(AF_Mean));
-    
-    %Obtendo a Constante Elástica do conjunto alavanca amostra (K)
-    flipY = flip(NumYaxis); %Invertendo o array das coordenadas Y,X para 
-    flipX = flip(NumXaxis); %que o indice 1 seja a coordenada da origem.       
-    
-    for i=1:1:length(MinYaxis)
-                               
-        %Pegando somente o regime repulsivo
-        if i == 1
-            allNumXaxis = NumXaxis;
-            allNumYaxis = NumYaxis;
-            [NumXaxis, NumYaxis] = repulsiveReg(NumXaxis, NumYaxis, handles);
-        end
-        
-        if get(handles.Sample_on_Substrate,'Value')
-            %Obtendo o K do conjunto sonda amostra
-            x = NumXaxis(1:length(NumXaxis),i);
-            y = NumYaxis(1:length(NumYaxis),i);
-            kSample(i) = kIndent(x,y, handles); 
-        elseif get(handles.Suspended_Sample,'Value')
-            %Para amostras suspensas o K precisa ser calculado de acordo
-            %com o modelo adequando, por esse motivo ele não é calculado e
-            %é retornado o valor zero.
-            %NumXaxis = flip(NumXaxis);           
-            kSample(i) = 0;
-        end
-        
-        %Salvando os valores de K dos ensaios das amostras em uma matriz
-        line_K = 1;
-        K_Matrix(line_K,1) = kSample(i);  %Salvando em uma matriz os valores de K
-        line_K = line_K + 1;
-        
-        %Salvando NumXaxis e NumYaxis em uma matriz
-        sizeX = size(NumXaxis);
-        sizeX = sizeX(1);
-        sizeY = size(NumYaxis);
-        sizeY = sizeY(1);
-        identationMatrix(1:sizeX(1),1) = NumXaxis(1:sizeX(1),i);  %Preencho a matriz coluna 1 e linhas até o tamanho do arrayX
-        identationMatrix(1:sizeY(1),2) = NumYaxis(1:sizeY(1),i);  %Preencho a matriz coluna 2 e linhas até o tamanho do arrayY
-        
-        sizeXall = size(allNumXaxis);
-        fullIdentMatrix(1:sizeXall(1),1) = allNumXaxis(1:sizeXall(1),i);
-        fullIdentMatrix(1:sizeXall(1),2) = allNumYaxis(1:sizeXall(1),i);
-        
-        %Salvando em uma matriz os valores de K e as Forças de todas as identações
-        
-        K_Force_matrix(line_K_F_matrix, 1) = kSample(i); %A mudança de linha na matriz segue o número referente a que arquivo está sendo processado no loop
-        K_Force_matrix(line_K_F_matrix, 2) = MinYaxis(i);
-        line_K_F_matrix = line_K_F_matrix + 1;
-        
-        %Salvando os arquivos gerados em Excel  
-        FileName = char(file(i));
-        FileName = FileName(1:length(FileName));
-        comma = FileName == '.'; 
-        FileName(comma) = '_'; %Onde houver pontos substitui por _
-        FileName = string(FileName);
-        save_name = get(handles.Archive_Name,'String')+ FileName;
-        save_directory = get(handles.Select_Directory,'String');
-        save_name_full_curve = get(handles.Archive_Name,'String') + FileName + "Curva Completa";
-        save_directory = get(handles.Select_Directory,'String');
-            
-        SaveFile(fullIdentMatrix, i, save_name_full_curve, save_directory, txtSize); %Função que salva o gráfico completo
-        SaveFile(identationMatrix, i, save_name, save_directory, txtSize, K_Force_matrix); %Função que salva somemnte repulsivo
-        
-        %Salvando um arquivo Excel com o valor das contantes K e de Força de
-        %cada experimento
-        
-    end
-    
-    %Encontrando a média da Const. Elática da Amostra e a enviando  para o usuário
-    
-    K_Mean = (sum(K_Matrix)/length(K_Matrix)); %Média dos valores da matriz
-    set(handles.ElastConstSample,'string',num2str(K_Mean));   
-    
-    %Gerando o gráfico
-    if get(handles.Suspended_Sample,'Value') 
-        figure(1)
-        plot(NumXaxis,NumYaxis,'LineWidth',0.5)
-        ylabel('Força (nN)'),xlabel('Deflexão vertical da amostra (nm)')
-        title('Curva de AFM' + " " + graph_direction)
-        grid on
-        drawnow
-    else
-        figure(1)
-        plot(NumXaxis,NumYaxis,'LineWidth',0.5)
-        ylabel('Força (nN)'),xlabel('Deslocamento vertical do piezo (nm)')
-        title('Curva de AFM' + " " + graph_direction)
-        grid on
-        drawnow
-    end
-    
-    txtIndex = txtIndex + 1; %Incrementando a variável do loop principal
-    
-    %Limpando as variáveis
-    clear NumXaxis;
-    clear NumYaxis;
-    clear identationMatrix;
+end
+
+%Encontrando a média da Const. Elática da Amostra e a enviando  para o usuário
+
+K_Mean = (sum(K_Matrix)/length(K_Matrix)); %Média dos valores da matriz
+set(handles.ElastConstSample,'string',num2str(K_Mean));
+
+%Gerando o gráfico
+if get(handles.Suspended_Sample,'Value')
+    figure(1)
+    plot(NumXaxis,NumYaxis,'LineWidth',0.5)
+    ylabel('Força (nN)'),xlabel('Deflexão vertical da amostra (nm)')
+    title('Curva de AFM' + " " + graph_direction)
+    grid on
+    drawnow
+else
+    figure(1)
+    plot(NumXaxis,NumYaxis,'LineWidth',0.5)
+    ylabel('Força (nN)'),xlabel('Deslocamento vertical do piezo (nm)')
+    title('Curva de AFM' + " " + graph_direction)
+    grid on
+    drawnow
+end
+
+txtIndex = txtIndex + 1; %Incrementando a variável do loop principal
+
+%Limpando as variáveis
+clear NumXaxis;
+clear NumYaxis;
+clear identationMatrix;
 
 
 
@@ -570,7 +516,12 @@ function Select_Directory_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 save_directory = uigetdir('C:\','Selecione uma pasta para salvar');
-set(handles.Select_Directory,'String',save_directory);
+
+if save_directory == 0
+    return;
+else
+    set(handles.Select_Directory,'String',save_directory);
+end
 
 % Hints: get(hObject,'String') returns contents of Select_Directory as text
 %        str2double(get(hObject,'String')) returns contents of Select_Directory as a double
@@ -695,7 +646,7 @@ get(handles.StartButton1,'Value', identationMatrix)
 function SaveFile(identationMatrix, txtIndex, archiveName, directory, txtSize, K_Force_matrix)
 
 save_name = archiveName;
-save_name_concat = save_name + " " + num2str(txtIndex); %Aqui eu utilizo a variável txtIndex para enumerar os arquivos e salvar com nome diferentes
+save_name_concat = save_name + "_tratado"; %Aqui eu utilizo a variável txtIndex para enumerar os arquivos e salvar com nome diferentes
 
 if (directory == "Diretório") %Verifica se foi selecionado um diretório
     save_directory = uigetdir('C:\','Selecione uma pasta para salvar');
@@ -719,7 +670,7 @@ percentageEnd = get(handles.Percentage_End,'Value');
 
 FlippedArrayY = NumYaxis;
 FlippedArrayX = NumXaxis;
-        
+
 auxSize = size(NumYaxis);
 lastNumberIndex = length(NumXaxis);
 aux = true;
@@ -731,9 +682,9 @@ for i=1:auxSize(2)
     %em um valor que não seja NaN e que é realmente o último número
     while aux
         if ~isnan(NumXaxis(lastNumberIndex,i))
-            if NumXaxis(1,i) > NumXaxis(lastNumberIndex,i)               
+            if NumXaxis(1,i) > NumXaxis(lastNumberIndex,i)
                 FlippedArrayY(1:lastNumberIndex,i) = flip(NumYaxis(1:lastNumberIndex,i));  %Inverte a ordem do vetor, pois ele está começando do fim para o início
-                FlippedArrayX(1:lastNumberIndex,i) = flip(NumXaxis(1:lastNumberIndex,i));                              
+                FlippedArrayX(1:lastNumberIndex,i) = flip(NumXaxis(1:lastNumberIndex,i));
                 aux = false;
             else
                 aux = false;
@@ -757,7 +708,7 @@ numFiles = numFiles(2);
 
 %Laço for responsável por tirar os NaNs do arquivo para evitar erro quando
 %for realizar o cálculo da equação da reta
-for j=1:numFiles 
+for j=1:numFiles
     for i=1:length(FlippedArrayY)
         if isnan(FlippedArrayY(i,j))
             FlippedArrayX(i:length(FlippedArrayY),j) = 0;
@@ -808,7 +759,7 @@ for i=1:1:numArc
     %crescente, caso não esteja a matriz é invertida. A condição para inverção
     %compara o primeiro elemento com o elemento 10% à frente dele.
     if auxY(i) > auxY(round((length(auxY)/10)))
-        yAxis(1:length(yAxis),i) = flip(auxY);    
+        yAxis(1:length(yAxis),i) = flip(auxY);
         xAxis(1:length(xAxis),i) = flip(auxX);
     end
 end
@@ -824,16 +775,16 @@ for i=1:1:numArc
     
     %A condição abaixo tenta evitar definir o começo de um falso regime
     %repulsivo, isso pode acontecer com sinais ruidosos onde um ponto pode
-    %ser de força positiva e em sequencia voltar a ser negativo. 
-    if auxIndex(1) == (auxIndex(1) + 1)
-        auxIndex = auxIndex(1);  
+    %ser de força positiva e em sequencia voltar a ser negativo.
+    if auxIndex(2) == (auxIndex(1) + 1)
+        auxIndex = auxIndex(1); 
     else
         auxIndex = auxIndex(2);
     end
     auxNewXAxis = xAxis(minIndex:length(xAxis),i);
-        
-    newYAxis(1:length(auxNewYAxis)-auxIndex+1,i) = auxNewYAxis(auxIndex:length(auxNewYAxis),1);    
-    newXAxis(1:length(auxNewXAxis)-auxIndex+1,i) = auxNewXAxis(auxIndex:length(auxNewYAxis),1) - auxNewXAxis(auxIndex); %Subtração que faz o eixo X começar em 0      
+    
+    newYAxis(1:length(auxNewYAxis)-auxIndex+1,i) = auxNewYAxis(auxIndex:length(auxNewYAxis),1);
+    newXAxis(1:length(auxNewXAxis)-auxIndex+1,i) = auxNewXAxis(auxIndex:length(auxNewYAxis),1) - auxNewXAxis(auxIndex); %Subtração que faz o eixo X começar em 0
 end
 
 %Salvando nas matrizes somente os valores maiores que zero após o gráfico
@@ -870,12 +821,18 @@ while txtIndex <= txtSize
     j = 1;
     
     mFile = fopen(string(file),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
-    TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+    
+    try 
+        TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
+    catch
+        return;
+    end
+    
     
     while auxChangeLine  %While responsável em pegar cada elemento do .txt e salvar em um vetor
         
         TakeLineThenStep = fgetl(mFile);
-       
+        
         if TakeLineThenStep ~= -1  %Essa condição verifica se chegou ao final do arquivo .txt
             %Variável i são as linhas da matriz, j são as colunas
             %Coluna 1 referente ao .txt 1 coluna 2 referente ao .txt 2...
@@ -885,21 +842,21 @@ while txtIndex <= txtSize
         else
             auxChangeLine = false;
         end
-     
+        
         i = i + 1;
     end
     txtIndex = txtIndex + 1;
     j = j + 1;
 end
 
-if NumYaxis(1) > NumYaxis(length(NumYaxis))  
+if NumYaxis(1) > NumYaxis(length(NumYaxis))
     NumYaxis = flip(NumYaxis);  %Inverte a ordem do vetor, pois ele está começando do fim para o início
 end
 
 figure
 txt_archive(1:length(NumYaxis),1) = 0:100/(length(NumYaxis)-1):100; %Crio o eixo X em função do tamanho do arquivo
 txt_archive(1:length(NumYaxis),2) = NumYaxis;                       %para representar a porcentagem dos dados
-    
+
 plot(txt_archive(1:length(txt_archive),1),txt_archive(1:length(txt_archive),2)) %Plota o gráfico
 
 ylabel('Eixo Y'),xlabel('Porcentagem do arquivo')
@@ -992,9 +949,7 @@ p1 = polyfit(x,y,1);
 kSample = p1(1);
 
 function response = checkInput(handles)
-if get(handles.Archive_Name,'String') == ""
-    response = 1;
-elseif get(handles.ConstS,'String') == ""
+if get(handles.ConstS,'String') == ""
     response = 1;
 elseif get(handles.ConstK,'String') == ""
     response = 1;
