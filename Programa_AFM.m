@@ -92,6 +92,7 @@ end
 %Enviando o valor da variável pelo guidata
 
 handles.file = file;
+handles.path = path;
 guidata(hObject,handles)
 
 % --- Executes on button press in StartButton1.
@@ -107,7 +108,8 @@ if checkInput(handles)
 end
 
 try
-    file = handles.file; %Recebe o valor  a prda variável do guidata
+    path =  handles.path;
+    file = handles.file; %Recebe o valor da variável do guidata
 catch
     warndlg("Nenhum arquivo foi importado!!!","ALERTA");
     return;
@@ -116,7 +118,7 @@ end
 dir = get(handles.Select_Directory,'String');
 
 if dir == "Diretório Salvar"
-    warndlg("Nenhum diretório foi selecionado!","ALERTA");
+    warndlg("Nenhum diretório foi selecionado!!!","ALERTA");
     return;
 end
 
@@ -141,12 +143,12 @@ while txtIndex <= txtSize
     auxChangeLine = true;
     i = 1;
     
-    mFile = fopen(string(file(txtIndex)),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
+    mFile = fopen(string(path) + string(file(txtIndex)),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
     
     try
         TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
     catch
-        warndlg("Você deve selecionar pelo menos 2 arquivos!","ATENÇÃO");
+        warndlg("Você deve selecionar pelo menos 2 arquivos!!!","ATENÇÃO");
         return;
     end
     
@@ -810,7 +812,8 @@ if isequal(file,0)
 else
     disp(['User selected ', fullfile(path,file)]);
 end
-
+fileName = string(file);
+file = (string(path)+ string(file));
 txtIndex = 1;
 txtSize = length(file);
 
@@ -820,11 +823,12 @@ while txtIndex <= txtSize
     i = 1;
     j = 1;
     
-    mFile = fopen(string(file),'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
+    mFile = fopen(file,'r'); %Atenção o indice do file deve ser omitido quando houver somente 1 .txt ficando somente file sem e ñ file(x)
     
     try 
         TakeLineThenStep = fgetl(mFile); %Muda de linha no arquivo .txt
     catch
+        errordlg("OH NÃO! HOUVE UM ERRO INTERNO ?");
         return;
     end
     
@@ -861,7 +865,7 @@ plot(txt_archive(1:length(txt_archive),1),txt_archive(1:length(txt_archive),2)) 
 
 ylabel('Eixo Y'),xlabel('Porcentagem do arquivo')
 title('Curva de AFM')
-legend(file) %Insere as legendas no gráfico
+legend(fileName) %Insere as legendas no gráfico
 grid on
 drawnow
 
