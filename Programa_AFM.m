@@ -102,7 +102,6 @@ function StartButton1_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 try
-    msgbox("Executando, aguarde...");
     %Tratamento de erros do usuário
     if checkInput(handles)
         warndlg("Todos os campos devem ser preenchidos! OBS: (O campo Nome do arquivo é opcional)","ALERTA");
@@ -123,6 +122,8 @@ try
         warndlg("Nenhum diretório foi selecionado!!!","ALERTA");
         return;
     end
+    
+    msgbox("Executando, aguarde...");
     
     ConstS = get(handles.ConstS,'Value');
     ConstK = get(handles.ConstK,'Value');
@@ -581,30 +582,36 @@ function GraphDirectory_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-[file,path] = uigetfile('*.xls', 'MultiSelect', 'on');
-if isequal(file,0)
-    disp('User selected Cancel');
-    return; %Finaliza a função para não causar erro
-else
-    disp(['User selected ', fullfile(path,file)]);
-end
-
-numb_sel_graph = length(file); %Obtendo quantos gráficos foram selecionados
-
-for i = 1:1:numb_sel_graph
-    hold on
-    grid on
-    figure(1)
-    directory = fullfile(path, file(i));        %Pega o diretório do arquivo
-    xls_archive = xlsread(string(directory));   %Lê o arquivo excel e salva em xls_archive
+try
+    [file,path] = uigetfile('*.xls', 'MultiSelect', 'on');
+    if isequal(file,0)
+        disp('User selected Cancel');
+        return; %Finaliza a função para não causar erro
+    else
+        disp(['User selected ', fullfile(path,file)]);
+    end
     
-    plot(flip(xls_archive(1:length(xls_archive),1)),flip(xls_archive(1:length(xls_archive),2))) %Plota os gráficos
+    numb_sel_graph = length(file); %Obtendo quantos gráficos foram selecionados
     
+    for i = 1:1:numb_sel_graph
+        hold on
+        grid on
+        figure(1);
+        directory = fullfile(path, file(i));        %Pega o diretório do arquivo
+        xls_archive = xlsread(string(directory));   %Lê o arquivo excel e salva em xls_archive
+        
+        plot(flip(xls_archive(1:length(xls_archive),1)),flip(xls_archive(1:length(xls_archive),2))) %Plota os gráficos
+        
+    end
+    
+    ylabel('Força (nN)'),xlabel('Deslocamento vertical do piezo (nm)')
+    title('Multiplas Curvas de AFM')
+    legend(file) %Insere as legendas no gráfico
+    
+catch
+    warndlg("Selecione no mínimo 2 arquivos!!!","ALERTA");
+    return;
 end
-
-ylabel('Força (nN)'),xlabel('Deslocamento do piezo (nm)')
-title('Multiplas Curvas de AFM')
-legend(file) %Insere as legendas no gráfico
 
 % --- Executes on button press in ImportData2.
 function ImportData2_Callback(hObject, eventdata, handles)
