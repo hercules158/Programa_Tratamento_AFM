@@ -232,7 +232,7 @@ try
     
     %Salvando a força de adesão dos ensaios da amostra em uma matriz
     
-    AF_Matrix = MinYaxis;  %Salvando em uma matriz os valores de K
+    AF_Matrix = MinYaxis;  %Salvando em uma matriz os valores de Força de Adesão
     
     %Encontrando a média da Força de Adesão e a enviando  para o usuário
     
@@ -266,9 +266,7 @@ try
         end
         
         %Salvando os valores de K dos ensaios das amostras em uma matriz
-        line_K = 1;
-        K_Matrix(line_K,1) = kSample(i);  %Salvando em uma matriz os valores de K
-        line_K = line_K + 1;
+        K_Matrix(i,1) = kSample(i);  %Salvando em uma matriz os valores de K
         
         %Salvando NumXaxis e NumYaxis em uma matriz
         sizeX = size(NumXaxis);
@@ -674,9 +672,21 @@ xlswrite(strcat(save_directory,'\',save_name_concat), identationMatrix);
 
 if (txtIndex == txtSize)
     try
-        xlswrite(strcat(save_directory,'\', "Ks e Forcas de Adesao"), K_Force_matrix);
-    catch
+        %Separando Double das Strings para salvar.
+        K_Force_Double(2:length(K_Force_matrix),1) = str2double(K_Force_matrix(2:length(K_Force_matrix),1));
+        K_Force_Double(2:length(K_Force_matrix),2) = str2double(K_Force_matrix(2:length(K_Force_matrix),2));
+        K_Force_Double(1,1) = NaN;
+        K_Force_Double(1,2) = NaN;
+               
+        %Removendo os valores Double da matriz de String
+        K_Force_matrix(2:length(K_Force_matrix),1) = "-----";
+        K_Force_matrix(2:length(K_Force_matrix),2) = "-----";
         
+        %Salvando os arquivos
+        xlswrite(strcat(save_directory,'\', "Valores dos Ks e Forcas de Adesao"), K_Force_Double);
+        xlswrite(strcat(save_directory,'\', "Legenda dos Ks e Forcas de Adesao"), K_Force_matrix);
+    catch
+        return;
     end
 end
 
