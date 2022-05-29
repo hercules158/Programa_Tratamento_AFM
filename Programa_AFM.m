@@ -164,7 +164,13 @@ try
                 %Coluna 1 referente ao .txt 1 coluna 2 referente ao .txt 2...
                 stringNum = regexp(TakeLineThenStep, '\t', 'split'); %Muda de linha no arquivo .txt e separa as strings do vetor
                 NumXaxis(i,j) = str2double(stringNum(1)); %Seleciono o índice do vetor onde está a string que necessito e salvo em outro vetor
-                NumYaxis(i,j) = str2double(stringNum(2));
+               
+                if isnan(str2double(stringNum(2)))
+                    NumYaxis(i,j) = str2double(stringNum(3));
+                else
+                    NumYaxis(i,j) = str2double(stringNum(2));
+                end
+                
             else
                 auxChangeLine = false;
             end
@@ -191,17 +197,28 @@ try
     
     txtIndex = 1; %Volto o valor da variável para usar no segundo loop
     
+    %Corrigindo os dados para ficarem na ordem do menor para o maior e
+    %assim o gráfico não ficar espelhado no sentido horizontal
+    SZ = size(NumXaxis);
+    for i=1:SZ(2)
+        for j=length(NumYaxis):-1:1
+            if ~isnan(NumYaxis(j,i))
+                    NumXaxis(1:length(NumXaxis),i) = flip(NumXaxis(1:length(NumXaxis),i));             
+            end
+        end
+    end
+    
     %Aplicando o offset no gráfico eixo Y
     NumYaxis = Offset(NumYaxis,NumXaxis, handles); %Função que aplica o offset
     
     %Convertendo os submultiplos de Volt/Ampere
     if(get(handles.nVRadioButtonY,'Value'))
-        NumXaxis = NumXaxis * 10^9;
-        NumYaxis = NumYaxis * 10^9;
+        NumXaxis = NumXaxis * 10^-9;
+        NumYaxis = NumYaxis * 10^-9;
     end
     if(get(handles.mVRadioButtonY,'Value'))
-        NumXaxis = NumXaxis * 10^3;
-        NumYaxis = NumYaxis * 10^3;
+        NumXaxis = NumXaxis * 10^-3;
+        NumYaxis = NumYaxis * 10^-3;
     end
     
     %Convertendo de Volt para nm
@@ -258,10 +275,6 @@ try
             y = NumYaxis(1:length(NumYaxis),i);
             kSample(i) = kIndent(x,y, handles);
         elseif get(handles.Suspended_Sample,'Value')
-            %Para amostras suspensas o K precisa ser calculado de acordo
-            %com o modelo adequando, por esse motivo ele não é calculado e
-            %é retornado o valor zero.
-            %NumXaxis = flip(NumXaxis);
             kSample(i) = 0;
         end
         
