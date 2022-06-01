@@ -188,8 +188,11 @@ try
     for j=1:txtSize
         for i=1:length(NumXaxis)
             if NumXaxis(i:length(NumXaxis),j) == 0
-                NumXaxis(i:length(NumXaxis),j) = nan;
-                NumYaxis(i:length(NumYaxis),j) = nan;
+                if i ~= length(NumXaxis)
+                    NumXaxis(i:length(NumXaxis),j) = nan;
+                    NumYaxis(i:length(NumYaxis),j) = nan;
+                    break
+                end
                 break
             end
         end
@@ -306,7 +309,7 @@ try
         FileName(comma) = '_'; %Onde houver pontos substitui por _
         FileName = string(FileName);
         K_Force_matrix(line_K_F_matrix - 1, 3) = FileName; %Salva na coluna 3 o nome do arquivo
-        save_name = get(handles.Archive_Name,'String') + FileName;
+        save_name = get(handles.Archive_Name,'String') + FileName + "Reg-Rep";
         save_directory = get(handles.Select_Directory,'String');
         save_name_full_curve = get(handles.Archive_Name,'String') + FileName + "Curva Completa";
         save_directory = get(handles.Select_Directory,'String');
@@ -674,7 +677,7 @@ get(handles.StartButton1,'Value', identationMatrix)
 function SaveFile(identationMatrix, txtIndex, archiveName, directory, txtSize, K_Force_matrix)
 
 save_name = archiveName;
-save_name_concat = save_name + "_tratado"; %Aqui eu utilizo a variável txtIndex para enumerar os arquivos e salvar com nome diferentes
+save_name_concat = save_name + "-tratado"; %Aqui eu utilizo a variável txtIndex para enumerar os arquivos e salvar com nome diferentes
 
 if (directory == "Diretório") %Verifica se foi selecionado um diretório
     save_directory = uigetdir('C:\','Selecione uma pasta para salvar');
