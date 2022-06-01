@@ -618,9 +618,17 @@ try
         
     end
     
-    ylabel('Força (nN)'),xlabel('Deslocamento vertical do piezo (nm)')
-    title('Multiplas Curvas de AFM')
-    legend(file) %Insere as legendas no gráfico
+    if get(handles.Sample_on_Substrate,'Value')
+        ylabel('Força (nN)'),xlabel('Deslocamento vertical do piezo (nm)')
+        title('Multiplas Curvas de AFM')
+        legend(file) %Insere as legendas no gráfico
+    elseif get(handles.Suspended_Sample,'Value')
+        ylabel('Força (nN)'),xlabel('Deslocamento vertical da amostra (nm)')
+        title('Multiplas Curvas de AFM')
+        legend(file) %Insere as legendas no gráfico
+    end
+        
+    
     
 catch
     warndlg("Selecione no mínimo 2 arquivos!!!","ALERTA");
